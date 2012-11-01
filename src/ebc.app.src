@@ -1,0 +1,12 @@
+{application, ebc,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ebc_app, []}},
+  {env, []}
+ ]}.

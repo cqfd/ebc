@@ -1,0 +1,6 @@
+*.beam
+*.org
+.#*
+*.swp
+/ebin
+/deps
