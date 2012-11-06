@@ -3,7 +3,8 @@
 
 -export([decode/1,
          decode_one/1,
-         encode/1]).
+         encode/1,
+         unfold/2]).
 
 decode(Bin) ->
     try
@@ -64,6 +65,14 @@ dictionary(S, Acc) ->
     {Key, Rest} = decode_one(S),
     {Value, RestOfTheRest} = decode_one(Rest),
     dictionary(RestOfTheRest, [{Key, Value}|Acc]).
+
+unfold(F, X) ->
+    case F(X) of
+        nothing ->
+            [];
+        {A, X2} ->
+            [A|unfold(F, X2)]
+    end.
 
 %% ------------------------------------------------------------------
 %% EUnit tests

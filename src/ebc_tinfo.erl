@@ -37,11 +37,13 @@ peers(TInfo) ->
     compact_peers(EncodedPeers).
 
 compact_peers(Bin) ->
-    compact_peers(Bin, []).
-compact_peers(<<>>, Acc) ->
-    Acc;
-compact_peers(<<Peer:6/bytes, Rest/bytes>>, Acc) ->
-    compact_peers(Rest, [compact_peer(Peer)|Acc]).
+    PeerBins = ebc:unfold(fun(<<Peer:6/bytes, Rest/binary>>) ->
+                                  {Peer, Rest};
+                             (<<>>) ->
+                                  nothing
+                          end,
+                          Bin),
+    [compact_peer(PeerBin) || PeerBin <- PeerBins].
 
 compact_peer(<<Ip:4/bytes, HiPort, LoPort>>) ->
     IpTuple = list_to_tuple(binary_to_list(Ip)),
@@ -54,3 +56,11 @@ compact_peer(<<Ip:4/bytes, HiPort, LoPort>>) ->
 
 compact_peer_test() ->
     ?assertEqual({{1,2,3,4}, 4567}, compact_peer(<<1,2,3,4,17,215>>)).
+
+compact_peers_test() ->
+    PeerA = {{1,2,3,4}, 1},
+    PeerB = {{12,34,56,78}, 2},
+    EncodedPeers = <<1,2,3,4,0,1,12,34,56,78,0,2>>,
+    Peers = compact_peers(EncodedPeers),
+    ?assert(lists:member(PeerA, Peers)),
+    ?assert(lists:member(PeerB, Peers)).
