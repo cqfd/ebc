@@ -10,15 +10,18 @@
          compact_peers/1]).
 
 interval(TInfo) ->
-    {ok, Interval} = orddict:find(<<"interval">>, ebc:decode(TInfo)),
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    {ok, Interval} = orddict:find(<<"interval">>, Decoding),
     Interval.
 
 min_interval(TInfo) ->
-    {ok, MinInterval} = orddict:find(<<"min interval">>, ebc:decode(TInfo)),
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    {ok, MinInterval} = orddict:find(<<"min interval">>, Decoding),
     MinInterval.
 
 tracker_id(TInfo) ->
-    case orddict:find(<<"tracker id">>, ebc:decode(TInfo)) of
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    case orddict:find(<<"tracker id">>, Decoding) of
         {ok, TrackerId} ->
             TrackerId;
         error ->
@@ -26,15 +29,18 @@ tracker_id(TInfo) ->
     end.
 
 complete(TInfo) ->
-    {ok, Complete} = orddict:find(<<"complete">>, ebc:decode(TInfo)),
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    {ok, Complete} = orddict:find(<<"complete">>, Decoding),
     Complete.
 
 incomplete(TInfo) ->
-    {ok, Incomplete} = orddict:find(<<"incomplete">>, ebc:decode(TInfo)),
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    {ok, Incomplete} = orddict:find(<<"incomplete">>, Decoding),
     Incomplete.
 
 peers(TInfo) ->
-    {ok, EncodedPeers} = orddict:find(<<"peers">>, ebc:decode(TInfo)),
+    {Decoding, <<>>} = ebc:decode(TInfo),
+    {ok, EncodedPeers} = orddict:find(<<"peers">>, Decoding),
     compact_peers(EncodedPeers).
 
 compact_peers(Bin) ->

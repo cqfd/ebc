@@ -1,28 +1,22 @@
 -module(ebc).
 -include_lib("eunit/include/eunit.hrl").
 
--export([decode/1,
-         decode_one/1,
+-export([decode_many/1,
+         decode/1,
          encode/1,
          unfold/2]).
 
-decode(Bin) ->
-    try
-        {Result, _Rest} = decode_one(Bin),
-        Result
-    catch
-        _Excpetion:_Reason ->
-            error
-    end.
+decode_many(Bin) ->
+    unfold(fun decode/1, Bin).
 
-decode_one(<<$i, S/binary>>) ->
-    integer(S, []);
-decode_one(<<$l, S/binary>>) ->
-    list(S, []);
-decode_one(<<$d, S/binary>>) ->
-    dictionary(S, orddict:new());
-decode_one(S) ->
-    string(S, []).
+decode(Bin = <<$i, _/binary>>) ->
+    integer(Bin);
+decode(Bin = <<$l, _/binary>>) ->
+    list(Bin);
+decode(Bin = <<$d, _/binary>>) ->
+    dictionary(Bin);
+decode(Bin) ->
+    string(Bin).
 
 encode([KvPair|Rest]) when is_tuple(KvPair) ->
     Encodings = << <<(encode(K))/binary, (encode(V))/binary>> || {K, V} <- [KvPair|Rest] >>,
@@ -40,31 +34,80 @@ encode(Xs) when is_binary(Xs) ->
 %% Internal Function Definitions
 %% ------------------------------------------------------------------
 
-string(<<$:, Rest/binary>>, Digits) ->
-    Len = list_to_integer(lists:reverse(Digits)),
-    <<Result:Len/binary, Leftover/binary>> = Rest,
-    {Result, Leftover};
-string(<<Digit, Rest/binary>>, Digits) ->
-    string(Rest, [Digit|Digits]).
+string(Bin) ->
+    case num(Bin) of
+        nothing ->
+            nothing;
+        {Len, <<$:, RestOne/bytes>>} ->
+            case RestOne of
+                <<Result:Len/bytes, RestTwo/bytes>> ->
+                    {Result, RestTwo};
+                _ ->
+                    nothing
+            end;
+        _ ->
+            nothing
+    end.
 
-integer(<<$e, Rest/binary>>, Acc) ->
-    N = list_to_integer(lists:reverse(Acc)),
-    {N, Rest};
-integer(<<Digit, Rest/binary>>, Acc) ->
-    integer(Rest, [Digit|Acc]).
+integer(<<$i, Bin/bytes>>) ->
+    case num(Bin) of
+        nothing ->
+            nothing;
+        {Num, <<$e, Rest/bytes>>} ->
+            {Num, Rest};
+        _ ->
+            nothing
+    end;
+integer(_) ->
+    nothing.
 
-list(<<$e, Rest/binary>>, Acc) ->
-    {lists:reverse(Acc), Rest};
-list(S, Acc) ->
-    {X, Rest} = decode_one(S),
-    list(Rest, [X|Acc]).
+list(<<$l, Bin/bytes>>) ->
+    case unfold(fun decode/1, Bin) of
+        nothing ->
+            nothing;
+        {Results, <<$e, Rest/bytes>>} ->
+            {Results, Rest};
+        _ ->
+            nothing
+    end;
+list(_) ->
+    nothing.
 
-dictionary(<<$e, Rest/binary>>, Acc) ->
-    {orddict:from_list(lists:reverse(Acc)), Rest};
-dictionary(S, Acc) ->
-    {Key, Rest} = decode_one(S),
-    {Value, RestOfTheRest} = decode_one(Rest),
-    dictionary(RestOfTheRest, [{Key, Value}|Acc]).
+dictionary(<<$d, Bin/binary>>) ->
+    case unfold(fun kv/1, Bin) of
+        nothing ->
+            nothing;
+        {KvPairs, <<$e, Rest/bytes>>} ->
+            {KvPairs, Rest};
+        _ ->
+            nothing
+    end.
+
+num(Bin) ->
+    case unfold(fun digit/1, Bin) of
+        {[], Bin} ->
+            nothing;
+        {Digits, Rest} ->
+            {list_to_integer(Digits), Rest}
+    end.
+
+digit(<<X, Rest/binary>>) when $0 =< X andalso X =< $9 ->
+    {X, Rest};
+digit(_Bin) ->
+    nothing.
+
+kv(Bin) ->
+    case string(Bin) of
+        nothing ->
+            nothing;
+        {Key, RestOne} ->
+            case decode(RestOne) of
+                nothing ->
+                    nothing;
+                {Value, RestTwo} ->
+                    {{Key, Value}, RestTwo}
+            end
+    end.
 
 unfold(F, X) ->
     unfold(F, X, []).
@@ -80,21 +123,33 @@ unfold(F, X, Acc) ->
 %% EUnit tests
 %% ------------------------------------------------------------------
 
+num_test() ->
+    ?assertEqual({1337, <<>>}, num(<<"1337">>)).
+
 decode_string_test() ->
-    ?assertEqual(<<"bittorrent">>, decode(<<"10:bittorrent">>)).
+    ?assertEqual({<<"bittorrent">>, <<>>}, decode(<<"10:bittorrent">>)).
 decode_integer_test() ->
-    ?assertEqual(1337, decode(<<"i1337e">>)).
+    ?assertEqual({1337, <<>>}, decode(<<"i1337e">>)).
 decode_list_test() ->
-    ?assertEqual([<<"foo">>, 123], decode(<<"l3:fooi123ee">>)).
+    ?assertEqual({[<<"foo">>, 123], <<>>}, decode(<<"l3:fooi123ee">>)).
 decode_dict_test() ->
-    ?assertEqual([{<<"cow">>, <<"moo">>}, {<<"spam">>, <<"eggs">>}],
+    ?assertEqual({[{<<"cow">>, <<"moo">>}, {<<"spam">>, <<"eggs">>}], <<>>},
                  decode(<<"d3:cow3:moo4:spam4:eggse">>)),
-    ?assertEqual([{<<"spam">>, [<<"a">>, <<"b">>]}],
+    ?assertEqual({[{<<"spam">>, [<<"a">>, <<"b">>]}], <<>>},
                  decode(<<"d4:spaml1:a1:bee">>)),
-    ?assertEqual([{<<"a">>,
-                  [{<<"b">>,
-                    [{<<"c">>, <<"bittorrent">>}]}]}],
+    ?assertEqual({[{<<"a">>,
+                    [{<<"b">>,
+                      [{<<"c">>, <<"bittorrent">>}]}]}], <<>>},
                  decode(<<"d1:ad1:bd1:c10:bittorrenteee">>)).
+
+decode_junky_string_test() ->
+    ?assertEqual(nothing, decode(<<"4x:eggs">>)).
+decode_junky_int_test() ->
+    ?assertEqual(nothing, decode(<<"i133xe">>)).
+decode_junky_list_test() ->
+    ?assertEqual(nothing, decode(<<"l3:foo3:bar3:bazxe">>)).
+decode_junky_dict_test() ->
+    ?assertEqual(nothing, decode(<<"d3:key5:valuexe">>)).
 
 encode_string_test() ->
     ?assertEqual(<<"10:bittorrent">>, encode(<<"bittorrent">>)).
@@ -115,4 +170,4 @@ unfold_test() ->
                             {X, Rest}
                     end,
                     Xs),
-    ?assertEqual(Xs, Result).
+    ?assertEqual({Xs, []}, Result).
