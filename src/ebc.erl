@@ -1,13 +1,9 @@
 -module(ebc).
 -include_lib("eunit/include/eunit.hrl").
 
--export([decode_many/1,
-         decode/1,
+-export([decode/1,
          encode/1,
          unfold/2]).
-
-decode_many(Bin) ->
-    unfold(fun decode/1, Bin).
 
 decode(Bin = <<$i, _/binary>>) ->
     integer(Bin);
