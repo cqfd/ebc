@@ -67,11 +67,13 @@ dictionary(S, Acc) ->
     dictionary(RestOfTheRest, [{Key, Value}|Acc]).
 
 unfold(F, X) ->
+    unfold(F, X, []).
+unfold(F, X, Acc) ->
     case F(X) of
         nothing ->
-            [];
+            {lists:reverse(Acc), X};
         {A, X2} ->
-            [A|unfold(F, X2)]
+            unfold(F, X2, [A|Acc])
     end.
 
 %% ------------------------------------------------------------------
@@ -104,3 +106,13 @@ encode_dict_test() ->
     Decoding = [{<<"a">>, <<"b">>},
                 {<<"c">>, [<<"d">>,<<"e">>,<<"f">>]}],
     ?assertEqual(<<"d1:a1:b1:cl1:d1:e1:fee">>, encode(Decoding)).
+
+unfold_test() ->
+    Xs = [1,2,3],
+    Result = unfold(fun([]) ->
+                            nothing;
+                       ([X|Rest]) ->
+                            {X, Rest}
+                    end,
+                    Xs),
+    ?assertEqual(Xs, Result).

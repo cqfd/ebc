@@ -6,7 +6,8 @@
          tracker_id/1,
          complete/1,
          incomplete/1,
-         peers/1]).
+         peers/1,
+         compact_peers/1]).
 
 interval(TInfo) ->
     {ok, Interval} = orddict:find(<<"interval">>, ebc:decode(TInfo)),
@@ -37,12 +38,12 @@ peers(TInfo) ->
     compact_peers(EncodedPeers).
 
 compact_peers(Bin) ->
-    PeerBins = ebc:unfold(fun(<<Peer:6/bytes, Rest/binary>>) ->
-                                  {Peer, Rest};
-                             (<<>>) ->
-                                  nothing
-                          end,
-                          Bin),
+    {PeerBins, <<>>} = ebc:unfold(fun(<<Peer:6/bytes, Rest/binary>>) ->
+                                          {Peer, Rest};
+                                     (<<>>) ->
+                                          nothing
+                                  end,
+                                  Bin),
     [compact_peer(PeerBin) || PeerBin <- PeerBins].
 
 compact_peer(<<Ip:4/bytes, HiPort, LoPort>>) ->
