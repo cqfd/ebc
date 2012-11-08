@@ -25,9 +25,14 @@ announce(Metainfo) ->
     binary_to_list(Announce).
 
 pieces(Metainfo) ->
-    {Decoding, <<>>} = ebc:decode(Metainfo),
-    {ok, Pieces} = orddict:find(<<"pieces">>, Decoding),
-    Pieces.
+    {ok, Pieces} = orddict:find(<<"pieces">>, info(Metainfo)),
+    {Hashes, <<>>} = ebc:unfold(fun(<<Piece:20/bytes, Rest/bytes>>) ->
+                                        {Piece, Rest};
+                                   (<<>>) ->
+                                        nothing
+                                end,
+                                Pieces),
+    Hashes.
 
 piece_length(Metainfo) ->
     {ok, PieceLength} = orddict:find(<<"piece length">>, info(Metainfo)),
