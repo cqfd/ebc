@@ -1,4 +1,5 @@
 -module(ebc).
+-include("ebc.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
 -export([decode/1,
