@@ -3,8 +3,7 @@
 -include("ebc.hrl").
 
 -record(s, {conn,
-            peer_id,
-            interested=false}).
+            peer_id}).
 
 %% ------------------------------------------------------------------
 %% API Function Exports
