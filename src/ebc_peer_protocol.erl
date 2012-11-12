@@ -11,13 +11,19 @@ decode_many(Bin) ->
     ebc:unfold(fun decode/1, Bin).
 
 -spec decode(binary()) -> {bittorrent_msg(), Rest :: binary()}.
-decode(<<19, "BitTorrent protocol",
-         Reserved:8/bytes, InfoHash:20/bytes, PeerId:20/bytes,
+decode(<<19,
+         "BitTorrent protocol",
+         Reserved:8/bytes,
+         InfoHash:20/bytes,
+         PeerId:20/bytes,
          Rest/bytes>>) ->
     {{handshake, Reserved, InfoHash, PeerId}, Rest};
-decode(<<0:32, Rest/binary>>) ->
+decode(<<0:32,
+         Rest/binary>>) ->
     {keep_alive, Rest};
-decode(<<Len:4/big-unsigned-integer-unit:8, Decoding:Len/bytes, Rest/bytes>>) ->
+decode(<<Len:4/unit:8,
+         Decoding:Len/bytes,
+         Rest/bytes>>) ->
     {decode_by_id(Decoding), Rest};
 decode(_Bin) ->
     nothing.
@@ -33,24 +39,26 @@ decode_by_id(<<2>>) ->
     interested;
 decode_by_id(<<3>>) ->
     not_interested;
-decode_by_id(<<4, Index:4/big-unsigned-integer-unit:8>>) ->
+decode_by_id(<<4,
+               Index:4/unit:8>>) ->
     {have, Index};
-decode_by_id(<<5, Bitfield/bytes>>) ->
+decode_by_id(<<5,
+               Bitfield/bytes>>) ->
     {bitfield, Bitfield};
 decode_by_id(<<6,
-               Index:4/big-unsigned-integer-unit:8,
-               Begin:4/big-unsigned-integer-unit:8,
-               Length:4/big-unsigned-integer-unit:8>>) ->
+               Index:4/unit:8,
+               Begin:4/unit:8,
+               Length:4/unit:8>>) ->
     {request, Index, Begin, Length};
 decode_by_id(<<7,
-               Index:4/big-unsigned-integer-unit:8,
-               Begin:4/big-unsigned-integer-unit:8,
+               Index:4/unit:8,
+               Begin:4/unit:8,
                Block/bytes>>) ->
     {piece, Index, Begin, Block};
 decode_by_id(<<8,
-               Index:4/big-unsigned-integer-unit:8,
-               Begin:4/big-unsigned-integer-unit:8,
-               Length:4/big-unsigned-integer-unit:8>>) ->
+               Index:4/unit:8,
+               Begin:4/unit:8,
+               Length:4/unit:8>>) ->
     {cancel, Index, Begin, Length}.
 
 -spec encode(bittorrent_msg()) -> binary().
