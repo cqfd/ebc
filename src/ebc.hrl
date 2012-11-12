@@ -24,3 +24,6 @@
                            Begin :: integer(),
                            Length :: integer()}.
 
+-record(piece, {idx = 0 :: integer(),
+                size = 0 :: integer(),
+                hash = <<>> :: binary()}).
