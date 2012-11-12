@@ -16,6 +16,20 @@ add(Index, Bitfield) ->
 contains(Index, Bitfield) ->
     at(Index, Bitfield) == 1.
 
+difference(As, Bs) ->
+    difference(As, Bs, 0, []).
+difference(<<>>, <<>>, _Idx, Indices) ->
+    lists:reverse(Indices);
+difference(<<1:1, RestAs/bitstring>>,
+           <<0:1, RestBs/bitstring>>,
+           Idx, Indices) ->
+    difference(RestAs, RestBs, Idx + 1, [Idx|Indices]);
+difference(<<_:1, RestAs/bitstring>>,
+           <<_:1, RestBs/bitstring>>,
+           Idx, Indices) ->
+    difference(RestAs, RestBs, Idx + 1, Indices).
+
+
 %% ------------------------------------------------------------------
 %% EUnit tests
 %% ------------------------------------------------------------------
@@ -32,3 +46,8 @@ contains_test() ->
     ?assertNot(contains(0, <<64>>)),
     ?assert(contains(8, <<0, 128>>)),
     ?assertNot(contains(9, <<0, 128>>)).
+
+difference_test() ->
+    ?assertEqual([7], difference(<<1>>, <<0>>)),
+    ?assertEqual([], difference(<<0>>, <<1>>)),
+    ?assertEqual([], difference(<<1,2,3>>, <<1,2,3>>)).
