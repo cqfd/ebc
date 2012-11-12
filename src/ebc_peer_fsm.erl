@@ -47,69 +47,51 @@ recv_msg(Pid, Msg) ->
 init(Conn) ->
     {ok, inchoate, #s{conn=Conn}}.
 
-inchoate({send, {handshake, Reserved, InfoHash, PeerId}}, State=#s{conn=Conn}) ->
-    Handshake = ebc_peer_protocol:encode({handshake, Reserved, InfoHash, PeerId}),
-    gen_tcp:send(Conn, Handshake),
+inchoate({send, H = {handshake, _, _, _}}, State=#s{conn=Conn}) ->
+    gen_tcp:send(Conn, ebc_peer_protocol:encode(H)),
     {next_state, shaking, State}.
 
 shaking({recv, {handshake, _Reserved, _InfoHash, PeerId}}, State) ->
     io:format("Received handshake!~n"),
     {next_state, am_choking, State#s{peer_id=PeerId}}.
 
-am_choking({recv, {bitfield, Bitfield}}, State) ->
-    io:format("Received bitfield: ~p~n", [Bitfield]),
+am_choking({send, Msg}, State) ->
+    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(Msg)),
+    {next_state, am_choking, State};
+
+am_choking({recv, keep_alive}, State) ->
+    {next_state, am_choking, State};
+
+am_choking({recv, choke}, State) ->
+    ebc_brain:choke(self()),
+    {next_state, am_choking, State};
+am_choking({recv, unchoke}, State) ->
+    ebc_brain:unchoke(self()),
+    {next_state, am_choking, State};
+
+am_choking({recv, interested}, State) ->
+    {next_state, am_choking, State};
+am_choking({recv, not_interested}, State) ->
     {next_state, am_choking, State};
 
 am_choking({recv, {have, PieceIndex}}, State) ->
     io:format("Peer has ~p~n", [PieceIndex]),
     {next_state, am_choking, State};
 
-am_choking({send, keep_alive}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(keep_alive)),
-    {next_state, am_choking, State};
-am_choking({recv, keep_alive}, State) ->
+am_choking({recv, {bitfield, Bitfield}}, State) ->
+    io:format("Received bitfield: ~p~n", [Bitfield]),
     {next_state, am_choking, State};
 
-am_choking({send, choke}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(choke)),
+am_choking({recv, {request, Index, Begin, Length}}, State) ->
+    io:format("Received request: ~p, ~p, ~p~n", [Index, Begin, Length]),
     {next_state, am_choking, State};
 
-am_choking({send, unchoke}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(unchoke)),
-    {next_state, am_choking, State};
-am_choking({recv, unchoke}, State) ->
-    io:format("Peer has unchoked us!~n"),
-    {next_state, am_choking, State};
-
-am_choking({send, interested}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(interested)),
-    {next_state, am_choking, State};
-
-am_choking({send, not_interested}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode(not_interested)),
-    {next_state, am_choking, State};
-
-am_choking({send, {have, PieceIndex}}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode({have,PieceIndex})),
-    {next_state, am_choking, State};
-
-am_choking({send, {bitfield, Bitfield}}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode({bitfield, Bitfield})),
-    {next_state, am_choking, State};
-
-am_choking({send, {request, Index, Begin, Length}}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode({request, Index, Begin, Length})),
-    {next_state, am_choking, State};
-
-am_choking({send, {piece, Index, Begin, Block}}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode({piece, Index, Begin, Block})),
-    {next_state, am_choking, State};
 am_choking({recv, {piece, Index, Begin, Block}}, State) ->
     io:format("Received piece ~p ~p: ~p~n", [Index, Begin, Block]),
     {next_state, am_choking, State};
 
-am_choking({send, {cancel, Index, Begin, Length}}, State) ->
-    gen_tcp:send(State#s.conn, ebc_peer_protocol:encode({cancel, Index, Begin, Length})),
+am_choking({recv, {cancel, Index, Begin, Length}}, State) ->
+    io:format("Received cancel: ~p, ~p, ~p~n", [Index, Begin, Length]),
     {next_state, am_choking, State}.
 
 handle_event(_Event, StateName, State) ->
