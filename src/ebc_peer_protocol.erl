@@ -75,24 +75,24 @@ encode(interested) ->
 encode(not_interested) ->
     <<0,0,0,1,3>>;
 encode({have, PieceIndex}) ->
-    <<0,0,0,5,4, PieceIndex:4/big-unsigned-integer-unit:8>>;
+    <<0,0,0,5,4, PieceIndex:4/unit:8>>;
 encode({bitfield, Bitfield}) ->
-    <<(byte_size(Bitfield)):4/big-unsigned-integer-unit:8, 5, Bitfield/bytes>>;
+    <<(byte_size(Bitfield)):4/unit:8, 5, Bitfield/bytes>>;
 encode({request, Index, Begin, Length}) ->
     <<0,0,0,13,6,
-      Index:4/big-unsigned-integer-unit:8,
-      Begin:4/big-unsigned-integer-unit:8,
-      Length:4/big-unsigned-integer-unit:8>>;
+      Index:4/unit:8,
+      Begin:4/unit:8,
+      Length:4/unit:8>>;
 encode({piece, Index, Begin, Block}) ->
     <<0,0,0,9,7,
-      Index:4/big-unsigned-integer-unit:8,
-      Begin:4/big-unsigned-integer-unit:8,
+      Index:4/unit:8,
+      Begin:4/unit:8,
       Block/bytes>>;
 encode({cancel, Index, Begin, Length}) ->
     <<0,0,0,13,8,
-      Index:4/big-unsigned-integer-unit:8,
-      Begin:4/big-unsigned-integer-unit:8,
-      Length:4/big-unsigned-integer-unit:8>>.
+      Index:4/unit:8,
+      Begin:4/unit:8,
+      Length:4/unit:8>>.
 
 %% ------------------------------------------------------------------
 %% EUnit tests
