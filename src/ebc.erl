@@ -65,8 +65,6 @@ integer(_) ->
 
 list(<<$l, Bin/bytes>>) ->
     case unfold(fun decode/1, Bin) of
-        nothing ->
-            nothing;
         {Results, <<$e, Rest/bytes>>} ->
             {Results, Rest};
         _ ->
@@ -77,8 +75,6 @@ list(_) ->
 
 dictionary(<<$d, Bin/binary>>) ->
     case unfold(fun kv/1, Bin) of
-        nothing ->
-            nothing;
         {KvPairs, <<$e, Rest/bytes>>} ->
             {KvPairs, Rest};
         _ ->
@@ -93,7 +89,7 @@ num(Bin) ->
             {list_to_integer(Digits), Rest}
     end.
 
-digit(<<X, Rest/binary>>) when $0 =< X andalso X =< $9 ->
+digit(<<X, Rest/binary>>) when $0 =< X, X =< $9 ->
     {X, Rest};
 digit(_Bin) ->
     nothing.
