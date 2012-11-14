@@ -46,12 +46,17 @@ string(Bin) ->
             nothing
     end.
 
+integer(<<$i, $-, Bin/bytes>>) ->
+    case num(Bin) of
+        {Num, <<$e, Rest/bytes>>} ->
+            {-Num, Rest};
+        _ ->
+            nothing
+    end;
 integer(<<$i, Bin/bytes>>) ->
     case num(Bin) of
-        nothing ->
-            nothing;
         {Num, <<$e, Rest/bytes>>} ->
-            {Num, Rest};
+            {-Num, Rest};
         _ ->
             nothing
     end;
