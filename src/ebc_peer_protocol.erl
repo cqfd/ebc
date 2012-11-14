@@ -62,8 +62,8 @@ decode_by_id(<<8,
     {cancel, Index, Begin, Length}.
 
 -spec encode(bittorrent_msg()) -> binary().
-encode({handshake, _Reserved, InfoHash, PeerId}) ->
-    <<19, "BitTorrent protocol", 0:64, InfoHash/bytes, PeerId/bytes>>;
+encode({handshake, Reserved, InfoHash, PeerId}) ->
+    <<19, "BitTorrent protocol", Reserved/bytes, InfoHash/bytes, PeerId/bytes>>;
 encode(keep_alive) ->
     <<0,0,0,0>>;
 encode(choke) ->
